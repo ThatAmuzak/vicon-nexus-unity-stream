@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -51,6 +52,12 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// </summary>
         public float AngleThreshold => angleThreshold;
 
+        /// <summary>
+        /// Automatically performs a merge after 5 seconds on awake
+        /// </summary>
+        [Tooltip("Automatically performs a merge after 5 seconds on awake"), SerializeField]
+        private bool autoMerge;
+
         [Tooltip("Called when successfully got the differences below the respective thresholds."), SerializeField] private UnityEvent onMergeSuccess;
 
         /// <summary>
@@ -71,6 +78,11 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// Called when the differences is above the respective thresholds.
         /// </summary>
         public UnityEvent OnDifferenceAboveThreshold => onDifferenceAboveThreshold;
+
+        private void Awake()
+        {
+            if(autoMerge) Invoke(nameof(MergeHWDs), 5f);
+        }
 
         /// <summary>
         /// Move the XR origin such that the Vicon HWD and XR HWD transforms are within specified thresholds.
