@@ -81,6 +81,7 @@ namespace ubco.ovilab.ViconUnityStream
         private LinkedList<List<float>> markerQueue;
         private Vector3 pos, k_vector, t_prev_vector, t_current_vector;
         private Quaternion rot;
+        private bool isWriterSetup;
         #endregion
 
         #region Unity methods
@@ -157,6 +158,7 @@ namespace ubco.ovilab.ViconUnityStream
             finalWriter = new StreamWriter(filePath, true);
             filePaths.Add(filePath);
             Debug.Log("Writing to:  " + filePath);
+            isWriterSetup = true;
         }
 
         private string GetPath(string suffix)
@@ -166,7 +168,7 @@ namespace ubco.ovilab.ViconUnityStream
 
         public void WriteData()
         {
-            if (!subjectDataManager.EnableWriteData || subjectDataManager.StreamType != StreamType.LiveStream)
+            if (!isWriterSetup || !subjectDataManager.EnableWriteData || subjectDataManager.StreamType != StreamType.LiveStream)
                 return;
 
             var currentTicks = DateTimeOffset.Now.ToUnixTimeMilliseconds();
