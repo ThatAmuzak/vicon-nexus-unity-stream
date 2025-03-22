@@ -33,22 +33,10 @@ namespace ubco.ovilab.ViconUnityStream
 
         [SerializeField] public Handedness handedness = Handedness.Right;
 
-        [Obsolete("Set position will be deprecated in a future version"), Tooltip("If the hand pose should be set"), SerializeField]
-        private bool setPosition = true;
         [Tooltip("If the hand model should be set to a specific scale"), SerializeField]
         private bool setScale = true;
         [Tooltip("The scale the model should be set to if setScale is enabled"), SerializeField]
         private float scaleToSet = 0.02f;
-
-        /// <summary>
-        /// If the hand pose should be set
-        /// </summary>
-        [Obsolete("Set position will be deprecated in a future version")]
-        public bool SetPosition
-        {
-            get => setPosition;
-            set => setPosition = value;
-        }
 
         /// <summary>
         /// If the hand model should be set to a specific scale
@@ -583,10 +571,7 @@ namespace ubco.ovilab.ViconUnityStream
                     else
                     {
                         string fingerId = BoneName.Substring(0, 2);
-                        if (setPosition)
-                        {
-                            Bone.position = BonePosition * viconUnitsToUnityUnits;
-                        }
+                        Bone.position = BonePosition * viconUnitsToUnityUnits;
                         if (setScale)
                         {
                             Transform p = Bone.parent;
@@ -629,19 +614,16 @@ namespace ubco.ovilab.ViconUnityStream
                         {
                             // Bone.rotation = Quaternion.identity;
                         }
-                        if (setPosition)
-                        {
-                            if (fingerId == finger_1)
-                                Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.ThumbNormalOffset * 0.01f));
-                            else if (fingerId == finger_3)
-                                Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.MiddleNormalOffset * 0.01f));
-                            else if (fingerId == finger_4)
-                                Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.RingNormalOffset * 0.01f));
-                            else if (fingerId == finger_5)
-                                Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.LittleNormalOffset * 0.01f));
-                            else
-                                Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.IndexNormalOffset * 0.01f));
-                        }
+                        if (fingerId == finger_1)
+                            Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.ThumbNormalOffset * 0.01f));
+                        else if (fingerId == finger_3)
+                            Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.MiddleNormalOffset * 0.01f));
+                        else if (fingerId == finger_4)
+                            Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.RingNormalOffset * 0.01f));
+                        else if (fingerId == finger_5)
+                            Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.LittleNormalOffset * 0.01f));
+                        else
+                            Bone.position += Bone.forward * (handProperties.BaseNormalOffset * (1 + handProperties.IndexNormalOffset * 0.01f));
 
                         if (segmentToJointMapping.ContainsKey(BoneName))
                         {
