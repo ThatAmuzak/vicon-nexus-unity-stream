@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Events;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using ubco.ovilab.ViconUnityStream.Utils;
+using UnityEngine;
+using UnityEngine.Events;
 
 namespace ubco.ovilab.ViconUnityStream
 {
@@ -12,32 +13,60 @@ namespace ubco.ovilab.ViconUnityStream
     {
         #region out facing interface
         [Tooltip("SubjectDataManager used to get data.")]
-        [SerializeField] protected SubjectDataManager subjectDataManager;
+        [SerializeField]
+        protected SubjectDataManager subjectDataManager;
+
         [Tooltip("The subject name to be used.")]
-        [SerializeField] protected string subjectName = "test";
+        [SerializeField]
+        protected string subjectName = "test";
+
         [Tooltip("Stratergy used for gap filling.")]
-        [SerializeField] protected GapFillingStrategy gapFillingStrategy = GapFillingStrategy.UseRemote;
+        [SerializeField]
+        protected GapFillingStrategy gapFillingStrategy = GapFillingStrategy.UseRemote;
+
         [Tooltip("The dafault data to use if not connecting to remote.")]
         [Space()]
-        [TextArea] [SerializeField] protected string defaultData = "{\"data\": {\"RWRB\": [-543.6625324688598, 207.2696870612411, 298.7514053730324], \"RFA2\": [-532.0721277646578, 220.17137432871033, 301.01629761935317], \"RFA1\": [-520.1440660572242, 201.39104705712728, 339.41934514555805], \"RWRA\": [-532.6974300716365, 189.02367806197196, 337.42141847242124], \"RH1\": [-560.7345454383594, 159.62419546128493, 330.3774691418835], \"RH3\": [-590.0032621097643, 131.76129785698242, 299.0094709326491], \"RH6\": [-562.2275968721467, 178.22968321613172, 289.7780921183954], \"RTH1\": [-521.0776063001258, 156.02975240617602, 339.52347728151585], \"RTH2\": [-533.1608764185024, 125.93223864863384, 346.6751934035616], \"RTH3\": [-544.0308683261262, 94.88325770113741, 340.18541871909747], \"RTH3P\": [-558.2383999037787, 98.54284010368167, 344.30830190364924], \"RTH4\": [-565.5234537423078, 83.35392844673802, 323.32104505694093], \"RH2\": [-585.6043517556936, 120.51194616610833, 321.788774764582], \"RIF1\": [-576.5885643353779, 78.82999103456628, 300.3582074396528], \"RIF2\": [-561.2383839807005, 59.365051118922004, 295.3749509588552], \"RIF3\": [-541.7682180796493, 45.73872562944883, 292.4172960222232], \"RTF1\": [-572.5416262201588, 87.20318096871338, 285.1907380694027], \"RTF2\": [-562.4119589663006, 62.738780575654275, 271.7188525984546], \"RTF3\": [-557.640123472733, 48.67593410004015, 265.6647298151231], \"RH4\": [-584.7190340388772, 139.86043222122856, 281.7731182084455], \"RRF1\": [-585.3695333810368, 117.21631146711684, 275.4715366418419], \"RRF2\": [-587.3318441581403, 98.12953148435754, 262.2992975340355], \"RRF3\": [-588.7462283921602, 71.40473234827627, 248.39760510410048], \"RRF4\": [-587.6055606791075, 56.662726798838854, 241.1235659054331], \"RH5\": [-576.2821771931049, 149.15875547966468, 267.5793086555055], \"RPF1\": [-587.1382537041475, 129.22951405026535, 250.65671596147286], \"RPF2\": [-593.5975138169013, 115.06673347598871, 237.79061600397645], \"RPF3\": [-598.0083756011302, 98.17580941339943, 225.52275793399647]}, \"hierachy\": {\"Arm\": [\"RWRB\", \"RFA2\", \"RFA1\", \"RWRA\"], \"Hand\": [\"RH1\", \"RH3\", \"RH6\"], \"R1D1\": [\"RTH1\"], \"R1D2\": [\"RTH2\"], \"R1D3\": [\"RTH3\", \"RTH3P\", \"RTH4\"], \"R2D1\": [\"RH2\"], \"R2D2\": [\"RIF1\"], \"R2D3\": [\"RIF2\", \"RIF3\"], \"R3D2\": [\"RTF1\"], \"R3D3\": [\"RTF2\", \"RTF3\"], \"R4D1\": [\"RH4\", \"RRF1\"], \"R4D2\": [\"RRF2\"], \"R4D3\": [\"RRF3\", \"RRF4\"], \"R5D1\": [\"RH5\"], \"R5D2\": [\"RPF1\"], \"R5D3\": [\"RPF2\", \"RPF3\"]}, \"sensorTriggered\": true}";
+        [TextArea]
+        [SerializeField]
+        protected string defaultData =
+            "{\"data\": {\"RWRB\": [-543.6625324688598, 207.2696870612411, 298.7514053730324], \"RFA2\": [-532.0721277646578, 220.17137432871033, 301.01629761935317], \"RFA1\": [-520.1440660572242, 201.39104705712728, 339.41934514555805], \"RWRA\": [-532.6974300716365, 189.02367806197196, 337.42141847242124], \"RH1\": [-560.7345454383594, 159.62419546128493, 330.3774691418835], \"RH3\": [-590.0032621097643, 131.76129785698242, 299.0094709326491], \"RH6\": [-562.2275968721467, 178.22968321613172, 289.7780921183954], \"RTH1\": [-521.0776063001258, 156.02975240617602, 339.52347728151585], \"RTH2\": [-533.1608764185024, 125.93223864863384, 346.6751934035616], \"RTH3\": [-544.0308683261262, 94.88325770113741, 340.18541871909747], \"RTH3P\": [-558.2383999037787, 98.54284010368167, 344.30830190364924], \"RTH4\": [-565.5234537423078, 83.35392844673802, 323.32104505694093], \"RH2\": [-585.6043517556936, 120.51194616610833, 321.788774764582], \"RIF1\": [-576.5885643353779, 78.82999103456628, 300.3582074396528], \"RIF2\": [-561.2383839807005, 59.365051118922004, 295.3749509588552], \"RIF3\": [-541.7682180796493, 45.73872562944883, 292.4172960222232], \"RTF1\": [-572.5416262201588, 87.20318096871338, 285.1907380694027], \"RTF2\": [-562.4119589663006, 62.738780575654275, 271.7188525984546], \"RTF3\": [-557.640123472733, 48.67593410004015, 265.6647298151231], \"RH4\": [-584.7190340388772, 139.86043222122856, 281.7731182084455], \"RRF1\": [-585.3695333810368, 117.21631146711684, 275.4715366418419], \"RRF2\": [-587.3318441581403, 98.12953148435754, 262.2992975340355], \"RRF3\": [-588.7462283921602, 71.40473234827627, 248.39760510410048], \"RRF4\": [-587.6055606791075, 56.662726798838854, 241.1235659054331], \"RH5\": [-576.2821771931049, 149.15875547966468, 267.5793086555055], \"RPF1\": [-587.1382537041475, 129.22951405026535, 250.65671596147286], \"RPF2\": [-593.5975138169013, 115.06673347598871, 237.79061600397645], \"RPF3\": [-598.0083756011302, 98.17580941339943, 225.52275793399647]}, \"hierachy\": {\"Arm\": [\"RWRB\", \"RFA2\", \"RFA1\", \"RWRA\"], \"Hand\": [\"RH1\", \"RH3\", \"RH6\"], \"R1D1\": [\"RTH1\"], \"R1D2\": [\"RTH2\"], \"R1D3\": [\"RTH3\", \"RTH3P\", \"RTH4\"], \"R2D1\": [\"RH2\"], \"R2D2\": [\"RIF1\"], \"R2D3\": [\"RIF2\", \"RIF3\"], \"R3D2\": [\"RTF1\"], \"R3D3\": [\"RTF2\", \"RTF3\"], \"R4D1\": [\"RH4\", \"RRF1\"], \"R4D2\": [\"RRF2\"], \"R4D3\": [\"RRF3\", \"RRF4\"], \"R5D1\": [\"RH5\"], \"R5D2\": [\"RPF1\"], \"R5D3\": [\"RPF2\", \"RPF3\"]}, \"sensorTriggered\": true}";
+
         [Space()]
         [Tooltip("Enables this script to drive a skeleton.")]
-        [SerializeField] private bool driveSkeleton = true;
+        [SerializeField]
+        private bool driveSkeleton = true;
+
         [Tooltip("Name of the root segment of the skeleton this script can drive.")]
-        [SerializeField] protected string rootSegment = "Arm";
+        [SerializeField]
+        protected string rootSegment = "Arm";
+
         [Tooltip("If below this number of markers, stop processing and hide everything.")]
-        [SerializeField] protected int dataQualityThreshold = 5; // If below this number of markers, stop processing and hide everything
+        [SerializeField]
+        protected int dataQualityThreshold = 5; // If below this number of markers, stop processing and hide everything
+
+        [Space()]
+        [Tooltip("Optional HWDMerger reference. When set and in continuous mode, the Vicon-to-Quest transform will be applied to segment positions if applyViconToQuestTransform is enabled.")]
+        [SerializeField]
+        protected HWDMerger hwdMerger;
+
+        [Tooltip("When enabled and hwdMerger is set with continuous mode, applies the Vicon-to-Quest coordinate transform to segment positions before driving the skeleton.")]
+        [SerializeField]
+        protected bool applyViconToQuestTransform = false;
 
         [Space()]
         [Tooltip("Event triggered when subject is hidden.")]
         public UnityEvent OnHidingSubject;
+
         [Tooltip("Event triggered when subject is shown.")]
         public UnityEvent OnShowingSubject;
 
         /// <summary>
         /// The subject name to be used.
         /// </summary>
-        public string SubejectName { get => subjectName; }
+        public string SubejectName
+        {
+            get => subjectName;
+        }
 
         /// <summary>
         /// Callback after all data is processed and skeleton is set.
@@ -57,7 +86,7 @@ namespace ubco.ovilab.ViconUnityStream
         #endregion
 
         #region Data processing related private vars
-        protected float viconUnitsToUnityUnits = 0.001f;  // This into vicon units = unity units
+        protected float viconUnitsToUnityUnits = 0.001f; // This into vicon units = unity units
 
         protected Dictionary<string, Vector3> finalPositionVectors = new();
         protected Dictionary<string, Transform> finalTransforms = new();
@@ -77,9 +106,13 @@ namespace ubco.ovilab.ViconUnityStream
         private ViconStreamData defaultStreamData;
 
         private List<string> invalidMarkers = new();
-        private List<float> k_curr, k_prev;
+        private List<float> k_curr,
+            k_prev;
         private LinkedList<List<float>> markerQueue;
-        private Vector3 pos, k_vector, t_prev_vector, t_current_vector;
+        private Vector3 pos,
+            k_vector,
+            t_prev_vector,
+            t_current_vector;
         private Quaternion rot;
         private bool isWriterSetup;
         #endregion
@@ -88,12 +121,28 @@ namespace ubco.ovilab.ViconUnityStream
         /// <inheritdoc />
         protected virtual void Start()
         {
-            segmentMarkers = new Dictionary<string, List<string>>() {
-                { "base1", new List<string>() { "base1"}},
-                { "base2", new List<string>() { "base2"}},
-                { "base3", new List<string>() { "base3"}},
-                { "base4", new List<string>() { "base4"}},
-                { "base5", new List<string>() { "base5"}}
+            segmentMarkers = new Dictionary<string, List<string>>()
+            {
+                {
+                    "base1",
+                    new List<string>() { "base1" }
+                },
+                {
+                    "base2",
+                    new List<string>() { "base2" }
+                },
+                {
+                    "base3",
+                    new List<string>() { "base3" }
+                },
+                {
+                    "base4",
+                    new List<string>() { "base4" }
+                },
+                {
+                    "base5",
+                    new List<string>() { "base5" }
+                },
             };
 
             SetupWriter();
@@ -125,8 +174,7 @@ namespace ubco.ovilab.ViconUnityStream
             else
             {
                 // TODO: move all of this to SubjectDataManager
-                if (subjectDataManager.StreamedData.TryGetValue(subjectName, out ViconStreamData subjectDataObj) && subjectDataObj != null &&
-                    subjectDataManager.StreamedRawData.TryGetValue(subjectName, out string subjectRawData) && subjectRawData != null)
+                if (subjectDataManager.StreamedData.TryGetValue(subjectName, out ViconStreamData subjectDataObj) && subjectDataObj != null && subjectDataManager.StreamedRawData.TryGetValue(subjectName, out string subjectRawData) && subjectRawData != null)
                 {
                     ProcessData(subjectDataObj, subjectRawData);
                 }
@@ -180,10 +228,7 @@ namespace ubco.ovilab.ViconUnityStream
         protected virtual string ConstructFinalWriterString()
         {
             // FIXME: update this to not use string concat so much.
-            return "{ 'positions':" + string.Join(",", finalPositionVectors.Select(kvp => "[" +kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) +
-                ", 'up':" + string.Join(",", finalUpVectors.Select(kvp => "[" +kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) +
-                ", 'forward':" + string.Join(",", finalForwardVectors.Select(kvp => "[" +kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) +
-                "}";
+            return "{ 'positions':" + string.Join(",", finalPositionVectors.Select(kvp => "[" + kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) + ", 'up':" + string.Join(",", finalUpVectors.Select(kvp => "[" + kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) + ", 'forward':" + string.Join(",", finalForwardVectors.Select(kvp => "[" + kvp.Key + ", " + kvp.Value.ToString("F6") + "]")) + "}";
         }
         #endregion
 
@@ -210,7 +255,7 @@ namespace ubco.ovilab.ViconUnityStream
                             _data = GetPreviousData(marker);
                         }
                         /// NOTE: Rest of GapFillingStrategy.Ignore handled in ApplyBoneTransform
-                        else if(gapFillingStrategy == GapFillingStrategy.Ignore)
+                        else if (gapFillingStrategy == GapFillingStrategy.Ignore)
                         {
                             dataValid = false;
                         }
@@ -241,7 +286,7 @@ namespace ubco.ovilab.ViconUnityStream
                     /// skip that data from being commited to previousData
                     if (invalidMarkers.Count == segment.Value.Count || previousData[segment.Value[0]].Count <= 1)
                     {
-                        foreach(string marker in segment.Value)
+                        foreach (string marker in segment.Value)
                         {
                             previousData[marker].RemoveLast();
                         }
@@ -253,7 +298,6 @@ namespace ubco.ovilab.ViconUnityStream
                         /// let t be a point which has data in previous frame but not current
                         /// t_curr (the estimate) = (t_prev - k_prev) + (k_curr - k_prev) + k_prev
                         /// t_curr = t_prev + (k_curr - k_prev)
-
                         /// pick a k
                         string k_marker = segment.Value.Where(x => !invalidMarkers.Contains(x)).ToArray()[0];
                         markerQueue = previousData[k_marker];
@@ -277,7 +321,8 @@ namespace ubco.ovilab.ViconUnityStream
                             /// Set that to the current data object
                             viconStreamData.data[t_marker] = GetPreviousData(t_marker);
                         }
-                        dataValid = true; /// Data is now valid
+                        dataValid = true;
+                        /// Data is now valid
                     }
                 }
 
@@ -307,18 +352,33 @@ namespace ubco.ovilab.ViconUnityStream
                 }
 
                 /// Test the data quality
-                if(segments[segment.Key] == Vector3.zero)
+                if (segments[segment.Key] == Vector3.zero)
                 {
                     zeroMarkers += 1;
                 }
             }
 
-            if(zeroMarkers > dataQualityThreshold)
+            if (zeroMarkers > dataQualityThreshold)
             {
                 HideSubject();
             }
 
             segments = ProcessSegments(segments, viconStreamData);
+
+            // Apply Vicon-to-Quest coordinate transform if configured
+            if (applyViconToQuestTransform && hwdMerger != null)
+            {
+                Pose T = hwdMerger.ViconToQuestTransform;
+                foreach (string key in segments.Keys.ToList())
+                {
+                    if (key != "PalmBase") // what is palm base??
+                    {
+                        Vector3 posUnity = segments[key] * viconUnitsToUnityUnits;
+                        segments[key] = (T.rotation * posUnity + T.position) / viconUnitsToUnityUnits;
+                        segmentsRotation[key] = T.rotation * segmentsRotation[key];
+                    }
+                }
+            }
 
             if (driveSkeleton)
             {
@@ -337,7 +397,6 @@ namespace ubco.ovilab.ViconUnityStream
                     transform.position = segments[rootSegment] * viconUnitsToUnityUnits;
                     transform.rotation = segmentsRotation[rootSegment];
                     FindAndTransform(transform, rootSegment);
-
                 }
             }
 
@@ -463,7 +522,8 @@ namespace ubco.ovilab.ViconUnityStream
         /// </summary>
         protected void HideSubject()
         {
-            if (SubjectHidden) return;
+            if (SubjectHidden)
+                return;
             OnHidingSubject.Invoke();
             SubjectHidden = true;
 
@@ -479,7 +539,8 @@ namespace ubco.ovilab.ViconUnityStream
         /// </summary>
         protected void ShowSubject()
         {
-            if (!SubjectHidden) return;
+            if (!SubjectHidden)
+                return;
             OnShowingSubject.Invoke();
             SubjectHidden = false;
 
@@ -504,6 +565,6 @@ namespace ubco.ovilab.ViconUnityStream
         UseRemote,
         Ignore,
         UsePrevious,
-        FillRelative
+        FillRelative,
     }
 }

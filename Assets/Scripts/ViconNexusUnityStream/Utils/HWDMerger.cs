@@ -58,6 +58,42 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         [Tooltip("Automatically performs a merge after 5 seconds on awake"), SerializeField]
         private bool autoMerge;
 
+        [Tooltip("Continuously compute the Vicon-to-Quest transform. When enabled, the offset is exposed via ViconToQuestTransform for hand scripts to apply, rather than being applied to the merger offset transform. The auto-merge still runs if enabled."), SerializeField]
+        private bool continuousMode = false;
+
+        /// <summary>
+        /// Enable or disable continuous offset computation.
+        /// </summary>
+        public bool ContinuousMode { get => continuousMode; set => continuousMode = value; }
+
+        [Tooltip("Low-pass filter strength for continuous mode. 0 = no filtering (instant), higher values = smoother but more lag."), SerializeField]
+        [Range(0f, 1f)]
+        private float continuousFilterBeta = 0.5f;
+
+        /// <summary>
+        /// Low-pass filter strength for continuous mode.
+        /// </summary>
+        public float ContinuousFilterBeta { get => continuousFilterBeta; set => continuousFilterBeta = value; }
+
+        /// <summary>
+        /// The current Vicon-to-Quest world-space transform. Apply this to a
+        /// Vicon-world position/rotation to get the corresponding Quest-world values.
+        /// Only updated when <see cref="continuousMode"/> is enabled.
+        /// </summary>
+        public Pose ViconToQuestTransform => new Pose(continuousFilteredPosition, continuousFilteredRotation);
+
+        private Vector3 continuousFilteredPosition = Vector3.zero;
+        private Quaternion continuousFilteredRotation = Quaternion.identity;
+        private bool continuousFilterInitialized = false;
+
+        [Tooltip("Offset from the Vicon HMD marker position to the user's eyes, in the headset's local space. For example, if markers are ~2cm above the eyes, set to (0, -0.02, 0). Applied when computing the Vicon-to-Quest transform in continuous mode."), SerializeField]
+        private Vector3 eyeOffset = Vector3.zero;
+
+        /// <summary>
+        /// Offset from the Vicon HMD markers to the user's eyes, in headset-local space.
+        /// </summary>
+        public Vector3 EyeOffset { get => eyeOffset; set => eyeOffset = value; }
+
         [Tooltip("Called when successfully got the differences below the respective thresholds."), SerializeField] private UnityEvent onMergeSuccess;
 
         /// <summary>
@@ -102,7 +138,7 @@ namespace ubco.ovilab.ViconUnityStream.Utils
                 mergerOffsetTransform.localRotation = localViconRotRelToParent * Quaternion.Inverse(localXRRotRelToParent);
 
                 Vector3 localXRPosRelToParent = parent.InverseTransformPoint(xrHWD.position);
-                Vector3 localViconPosRelToParent = parent.InverseTransformPoint(viconHWD.position);
+                Vector3 localViconPosRelToParent = parent.InverseTransformPoint(viconHWD.position + viconHWD.rotation * eyeOffset);
                 mergerOffsetTransform.localPosition = localViconPosRelToParent - localXRPosRelToParent;
 
                 if (IsBelowThreshold())
@@ -136,9 +172,36 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// <inheritdoc />
         protected void Update()
         {
-            if (!IsBelowThreshold())
+            if (continuousMode)
+            {
+                ComputeContinuousOffset();
+            }
+            else if (!IsBelowThreshold())
             {
                 OnDifferenceAboveThreshold.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Compute the Vicon-to-Quest world-space offset with low-pass filtering.
+        /// </summary>
+        private void ComputeContinuousOffset()
+        {
+            Quaternion rotOffset = xrHWD.rotation * Quaternion.Inverse(viconHWD.rotation);
+            Vector3 viconEyePos = viconHWD.position + viconHWD.rotation * eyeOffset;
+            Vector3 posOffset = xrHWD.position - rotOffset * viconEyePos;
+
+            if (!continuousFilterInitialized)
+            {
+                continuousFilteredPosition = posOffset;
+                continuousFilteredRotation = rotOffset;
+                continuousFilterInitialized = true;
+            }
+            else
+            {
+                float alpha = 1f - continuousFilterBeta;
+                continuousFilteredPosition = Vector3.Lerp(continuousFilteredPosition, posOffset, alpha);
+                continuousFilteredRotation = Quaternion.Slerp(continuousFilteredRotation, rotOffset, alpha);
             }
         }
     }

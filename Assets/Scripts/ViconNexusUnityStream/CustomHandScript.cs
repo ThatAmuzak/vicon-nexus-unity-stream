@@ -348,6 +348,9 @@ namespace ubco.ovilab.ViconUnityStream
 
             };
             handSubsystem = ViconXRLoader.Instance.HandSubsystem;
+
+            // Enable Vicon-to-Quest coordinate transform when a HWDMerger is configured
+            applyViconToQuestTransform = true;
         }
 
         /// <inheritdoc />
