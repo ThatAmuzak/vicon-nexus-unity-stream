@@ -94,6 +94,20 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// </summary>
         public Vector3 EyeOffset { get => eyeOffset; set => eyeOffset = value; }
 
+        [Tooltip("World-space residual translation of the Vicon-to-Quest transform, solved by guided hand-alignment calibration. Applied in continuous mode to the position component of ViconToQuestTransform. Expected to be re-solved per session if auto-merge convergence varies."), SerializeField]
+        private Vector3 calibrationOffset = Vector3.zero;
+
+        /// <summary>
+        /// World-space residual translation of the Vicon-to-Quest transform,
+        /// solved by guided hand-alignment calibration.
+        /// </summary>
+        public Vector3 CalibrationOffset { get => calibrationOffset; set => calibrationOffset = value; }
+
+        /// <summary>
+        /// Set the world-space calibration offset applied to the Vicon-to-Quest transform in continuous mode.
+        /// </summary>
+        public void SetCalibrationOffset(Vector3 offset) => calibrationOffset = offset;
+
         [Tooltip("Called when successfully got the differences below the respective thresholds."), SerializeField] private UnityEvent onMergeSuccess;
 
         /// <summary>
@@ -189,7 +203,7 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         {
             Quaternion rotOffset = xrHWD.rotation * Quaternion.Inverse(viconHWD.rotation);
             Vector3 viconEyePos = viconHWD.position + viconHWD.rotation * eyeOffset;
-            Vector3 posOffset = xrHWD.position - rotOffset * viconEyePos;
+            Vector3 posOffset = xrHWD.position - rotOffset * viconEyePos + calibrationOffset;
 
             if (!continuousFilterInitialized)
             {
