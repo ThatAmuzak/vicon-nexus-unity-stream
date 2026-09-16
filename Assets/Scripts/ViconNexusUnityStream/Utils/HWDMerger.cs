@@ -94,7 +94,7 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// </summary>
         public Vector3 EyeOffset { get => eyeOffset; set => eyeOffset = value; }
 
-        [Tooltip("World-space residual translation of the Vicon-to-Quest transform, solved by guided hand-alignment calibration. Applied in continuous mode to the position component of ViconToQuestTransform. Expected to be re-solved per session if auto-merge convergence varies."), SerializeField]
+        [Tooltip("World-space translation that cancels the residual rendering error measured by guided hand-alignment calibration (the negated residual mean: rendered wrist position minus real-hand position, since adding it shifts all rendered Vicon content by +offset). Applied in continuous mode, and only after a MergeHWDs snap: the offset is solved in the post-merge world frame, so applying it earlier would be meaningless or absorbed by the snap. Expected to be re-solved per session if auto-merge convergence varies."), SerializeField]
         private Vector3 calibrationOffset = Vector3.zero;
 
         /// <summary>
@@ -104,7 +104,16 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         public Vector3 CalibrationOffset { get => calibrationOffset; set => calibrationOffset = value; }
 
         /// <summary>
-        /// Set the world-space calibration offset applied to the Vicon-to-Quest transform in continuous mode.
+        /// True once <see cref="MergeHWDs"/> has been triggered. The calibration
+        /// offset only enters the continuous transform after that: it is solved
+        /// in the post-merge world frame, so it must not be applied on top of
+        /// the pre-snap alignment (and a later snap would absorb it).
+        /// </summary>
+        public bool MergeTriggered { get; private set; }
+
+        /// <summary>
+        /// Set the world-space calibration offset applied to the Vicon-to-Quest
+        /// transform in continuous mode, after a MergeHWDs snap.
         /// </summary>
         public void SetCalibrationOffset(Vector3 offset) => calibrationOffset = offset;
 
@@ -139,6 +148,11 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         /// </summary>
         public void MergeHWDs()
         {
+            // The calibration offset is solved relative to the post-merge world
+            // frame; from here on it applies on top of the merged alignment
+            // (see ComputeContinuousOffset).
+            mergeTriggered = true;
+
             bool success = false;
             for (int i = 0; i < 5; ++i)
             {
@@ -203,7 +217,7 @@ namespace ubco.ovilab.ViconUnityStream.Utils
         {
             Quaternion rotOffset = xrHWD.rotation * Quaternion.Inverse(viconHWD.rotation);
             Vector3 viconEyePos = viconHWD.position + viconHWD.rotation * eyeOffset;
-            Vector3 posOffset = xrHWD.position - rotOffset * viconEyePos + calibrationOffset;
+            Vector3 posOffset = xrHWD.position - rotOffset * viconEyePos + (mergeTriggered ? calibrationOffset : Vector3.zero);
 
             if (!continuousFilterInitialized)
             {
