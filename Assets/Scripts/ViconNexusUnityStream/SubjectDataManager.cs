@@ -165,6 +165,32 @@ namespace ubco.ovilab.ViconUnityStream
         /// </summary>
         public string PathToRecordedData { get => pathToRecordedData; }
 
+        // Streamed Vicon data is in millimetres; keep in sync with CustomSubjectScript.viconUnitsToUnityUnits.
+        private const float viconStreamUnitsToMeters = 0.001f;
+
+        [SerializeField, Tooltip("Position of the global world-space transform applied to all streamed Vicon data, in meters (Unity world frame). Each streamed position is rotated about the world origin by the transform rotation, then translated by this. Applied to live streamed data only; raw/recorded data is unaffected.")]
+        private Vector3 viconWorldTransformPosition = Vector3.zero;
+
+        [SerializeField, Tooltip("Rotation of the global world-space transform applied to all streamed Vicon data, in the Unity world frame. Each streamed position is rotated about the world origin by this, and each streamed rotation is pre-multiplied by it. Applied to live streamed data only; raw/recorded data is unaffected.")]
+        private Quaternion viconWorldTransformRotation = Quaternion.identity;
+
+        /// <summary>
+        /// Global world-space transform applied to all streamed Vicon data
+        /// (all subjects) before it reaches subject scripts: streamed positions
+        /// are rotated about the Unity world origin then translated, streamed
+        /// rotations are pre-multiplied. Expressed in Unity conventions —
+        /// position in meters, rotation in the Unity world frame.
+        /// </summary>
+        public Pose ViconWorldTransform
+        {
+            get => new Pose(viconWorldTransformPosition, viconWorldTransformRotation);
+            set
+            {
+                viconWorldTransformPosition = value.position;
+                viconWorldTransformRotation = value.rotation;
+            }
+        }
+
         private List<string> subjectList = new();
         private WebSocket webSocket;
         private string pathBaseToRecordedData,
@@ -497,6 +523,7 @@ namespace ubco.ovilab.ViconUnityStream
                 {
                     string rawJsonDataString = jsonDataObject.ToString();
                     data[subject] = JsonConvert.DeserializeObject<ViconStreamData>(rawJsonDataString);
+                    ApplyViconWorldTransform(data[subject]);
                     rawData[subject] = rawJsonDataString;
                 }
                 else
@@ -515,6 +542,67 @@ namespace ubco.ovilab.ViconUnityStream
                 lock(dataLock)
                 {
                     dataToWrite[currentTicks.ToString()] = new(data);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Apply <see cref="ViconWorldTransform"/> to one subject's freshly
+        /// streamed data. Streamed entries store positions in Vicon axes
+        /// (z-up, millimetres) at indices 0-2 and Unity-convention quaternions
+        /// (x, y, z, w) at indices 3-6 — the same layout
+        /// <see cref="CustomSubjectScript"/> consumes via its ListToVector axis
+        /// swap. Each entry's position is rotated about the world origin then
+        /// translated; each entry's rotation is pre-multiplied. Transforming
+        /// here, before subject processing, covers every consumer of the
+        /// stream (segments, markers, HWD, recorded playback plumbing) and
+        /// leaves the raw/recorded JSON untouched.
+        /// </summary>
+        private void ApplyViconWorldTransform(ViconStreamData streamData)
+        {
+            if (streamData?.data == null)
+            {
+                return;
+            }
+
+            bool hasRotation = viconWorldTransformRotation != Quaternion.identity;
+            bool hasTranslation = viconWorldTransformPosition != Vector3.zero;
+            if (!hasRotation && !hasTranslation)
+            {
+                return;
+            }
+
+            foreach (List<float> entry in streamData.data.Values)
+            {
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                Debug.Assert(entry.Count == 3 || entry.Count >= 7, $"Unexpected streamed data entry length: {entry.Count} (expected 3 for position-only or >= 7 for position + rotation)");
+                if (entry.Count < 3)
+                {
+                    continue;
+                }
+
+                // Streamed positions are in Vicon axes (z-up); swap to Unity
+                // axes (y-up) exactly like CustomSubjectScript.ListToVector.
+                Vector3 position = new Vector3(entry[0], entry[2], entry[1]) * viconStreamUnitsToMeters;
+                position = viconWorldTransformRotation * position + viconWorldTransformPosition;
+                entry[0] = position.x / viconStreamUnitsToMeters;
+                entry[1] = position.z / viconStreamUnitsToMeters;
+                entry[2] = position.y / viconStreamUnitsToMeters;
+
+                if (entry.Count >= 7)
+                {
+                    // Streamed rotations are Unity-convention quaternions; a
+                    // world-space rotation is applied by pre-multiplication.
+                    Quaternion rotation = new Quaternion(entry[3], entry[4], entry[5], entry[6]);
+                    rotation = viconWorldTransformRotation * rotation;
+                    entry[3] = rotation.x;
+                    entry[4] = rotation.y;
+                    entry[5] = rotation.z;
+                    entry[6] = rotation.w;
                 }
             }
         }
