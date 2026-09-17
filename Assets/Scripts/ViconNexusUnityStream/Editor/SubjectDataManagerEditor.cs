@@ -17,7 +17,8 @@ namespace ubco.ovilab.ViconUnityStream.Editor
         private SerializedProperty scriptProperty, totalFramesProperty, currentFrameProperty,
             fileSaveLocationBaseProperty, fixedFileSaveLocationBaseProperty, playProperty, pathToDataFileProperty,
             jsonlFilesToLoadProperty, enableWriteDataProperty, fileNameBaseProperty,
-            baseURIProperty, streamTypeProperty, suppressMissingSubjectWarningProperty;
+            baseURIProperty, streamTypeProperty, suppressMissingSubjectWarningProperty,
+            viconWorldTransformPositionProperty, viconWorldTransformRotationProperty;
 
         private bool showDuplicateWarning = false;
         private Texture2D playIcon, pauseIcon, prevIcon, nextIcon, ffwdIcon, frwdIcon;
@@ -43,6 +44,8 @@ namespace ubco.ovilab.ViconUnityStream.Editor
             fileNameBaseProperty = serializedObject.FindProperty("fileNameBase");
             playProperty = serializedObject.FindProperty("play");
             suppressMissingSubjectWarningProperty = serializedObject.FindProperty("suppressMissingSubjectWarning");
+            viconWorldTransformPositionProperty = serializedObject.FindProperty("viconWorldTransformPosition");
+            viconWorldTransformRotationProperty = serializedObject.FindProperty("viconWorldTransformRotation");
 
             string packagePath = "Packages/ubc.ok.ovilab.vicon-nexus-unity-stream/Assets/Scripts/ViconNexusUnityStream/Editor/Resources";
             playIcon = (Texture2D)AssetDatabase.LoadAssetAtPath($"{packagePath}/play.png", typeof(Texture2D));
@@ -87,6 +90,8 @@ namespace ubco.ovilab.ViconUnityStream.Editor
             }
             EditorGUILayout.PropertyField(baseURIProperty);
             EditorGUILayout.PropertyField(suppressMissingSubjectWarningProperty);
+            EditorGUILayout.PropertyField(viconWorldTransformPositionProperty);
+            EditorGUILayout.PropertyField(viconWorldTransformRotationProperty);
             using(var check = new EditorGUI.ChangeCheckScope())
             {
                 EditorGUILayout.PropertyField(streamTypeProperty);
