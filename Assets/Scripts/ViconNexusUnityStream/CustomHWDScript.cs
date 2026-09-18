@@ -31,6 +31,16 @@ namespace ubco.ovilab.ViconUnityStream
         [Tooltip("Beta value for rotation filter")]
         [SerializeField] private float rotFilterBeta = 50;
 
+        /// <summary>
+        /// Read access to the serialized HWD offsets, for calibration capture
+        /// provenance: logging the offsets actually applied per sample makes any
+        /// stale or changed offset visible in the data instead of the console.
+        /// </summary>
+        public Vector3 HmdPositionOffset => hmdPositionOffset;
+        public Quaternion HmdRotationOffset => hmdRotationOffset;
+        public bool ApplyPosFilter => applyPosFilter;
+        public bool ApplyRotFilter => applyRotFilter;
+
         private OneEuroFilter<Quaternion> rotFilter;
         private OneEuroFilter<Vector3> posFilter;
         private Vector3 imaginaryCentre;

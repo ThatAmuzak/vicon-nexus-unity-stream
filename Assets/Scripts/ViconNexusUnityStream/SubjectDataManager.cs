@@ -160,6 +160,14 @@ namespace ubco.ovilab.ViconUnityStream
         public Dictionary<string, string> StreamedRawData => rawData;
 
         /// <summary>
+        /// Unix-epoch milliseconds (DateTimeOffset.Now) of the most recent
+        /// stream message received. Written from the websocket callback and read
+        /// from the main thread; a plain long write/read is used deliberately —
+        /// consumers treat this as provenance, not a synchronization point.
+        /// </summary>
+        public long LastStreamTick { get; private set; }
+
+        /// <summary>
         /// The path to which the data is being recorded.
         /// <seealso cref="SetPathToRecordedData"/>
         /// </summary>
@@ -517,6 +525,7 @@ namespace ubco.ovilab.ViconUnityStream
         {
             JObject jsonObject = JObject.Parse(Encoding.UTF8.GetString(receivedData));
             long currentTicks = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            LastStreamTick = currentTicks;
             foreach (string subject in subjectList)
             {
                 if (jsonObject.TryGetValue(subject, out JToken jsonDataObject))
