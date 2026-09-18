@@ -23,6 +23,8 @@ namespace ubco.ovilab.ViconUnityStream
         [Space()]
         [Tooltip("Enables this script to drive a skeleton.")]
         [SerializeField] private bool driveSkeleton = true;
+        [Tooltip("If set, this subject's streamed data bypasses the SubjectDataManager's global Vicon world transform (both the position and rotation knobs). Note: the per-subject gap-fill cache stores the stream values as received, so a subject with this set consistently caches un-knobbed values; toggling the bool mid-session mixes knobbed and un-knobbed frames in the cache until it drains.")]
+        [SerializeField] private bool ignoreViconWorldTransform = false;
         [Tooltip("Name of the root segment of the skeleton this script can drive.")]
         [SerializeField] protected string rootSegment = "Arm";
         [Tooltip("If below this number of markers, stop processing and hide everything.")]
@@ -38,6 +40,12 @@ namespace ubco.ovilab.ViconUnityStream
         /// The subject name to be used.
         /// </summary>
         public string SubejectName { get => subjectName; }
+
+        /// <summary>
+        /// Read access to the per-subject opt-out of the manager's global
+        /// Vicon world transform.
+        /// </summary>
+        public bool IgnoreViconWorldTransform => ignoreViconWorldTransform;
 
         /// <summary>
         /// Callback after all data is processed and skeleton is set.
@@ -58,6 +66,49 @@ namespace ubco.ovilab.ViconUnityStream
 
         #region Data processing related private vars
         protected float viconUnitsToUnityUnits = 0.001f;  // This into vicon units = unity units
+
+        /// <summary>
+        /// Static subject-name → instance lookup so SubjectDataManager can
+        /// query a subject's per-subject stream preferences (e.g. the global
+        /// world-transform opt-out) without holding scene references. Keyed by
+        /// the subject name the instance registers with.
+        /// </summary>
+        private static readonly Dictionary<string, CustomSubjectScript> worldTransformLookup = new();
+
+        private void RegisterForWorldTransformLookup()
+        {
+            if (worldTransformLookup.TryGetValue(subjectName, out CustomSubjectScript existing) && existing != null && existing != this)
+            {
+                Debug.LogError($"CustomSubjectScript: duplicate subject name `{subjectName}` registered for world-transform lookup; replacing the previous instance.");
+            }
+            worldTransformLookup[subjectName] = this;
+        }
+
+        private void UnregisterForWorldTransformLookup()
+        {
+            if (worldTransformLookup.TryGetValue(subjectName, out CustomSubjectScript existing) && existing == this)
+            {
+                worldTransformLookup.Remove(subjectName);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the subject named <paramref name="subjectName"/>
+        /// has opted out of the global Vicon world transform. Asserts the
+        /// lookup found a live instance — a missing entry means the subject
+        /// script is not enabled (or not in the scene), in which case the
+        /// caller must decide the fallback explicitly.
+        /// </summary>
+        public static bool TryGetIgnoresViconWorldTransform(string subjectName, out bool ignores)
+        {
+            if (worldTransformLookup.TryGetValue(subjectName, out CustomSubjectScript script) && script != null)
+            {
+                ignores = script.ignoreViconWorldTransform;
+                return true;
+            }
+            ignores = false;
+            return false;
+        }
 
         protected Dictionary<string, Vector3> finalPositionVectors = new();
         protected Dictionary<string, Transform> finalTransforms = new();
@@ -103,12 +154,14 @@ namespace ubco.ovilab.ViconUnityStream
         protected virtual void OnEnable()
         {
             subjectDataManager.RegisterSubject(subjectName);
+            RegisterForWorldTransformLookup();
         }
 
         /// <inheritdoc />
         protected virtual void OnDisable()
         {
             subjectDataManager.UnRegisterSubject(subjectName);
+            UnregisterForWorldTransformLookup();
         }
 
         /// <inheritdoc />

@@ -532,7 +532,7 @@ namespace ubco.ovilab.ViconUnityStream
                 {
                     string rawJsonDataString = jsonDataObject.ToString();
                     data[subject] = JsonConvert.DeserializeObject<ViconStreamData>(rawJsonDataString);
-                    ApplyViconWorldTransform(data[subject]);
+                    ApplyViconWorldTransform(subject, data[subject]);
                     rawData[subject] = rawJsonDataString;
                 }
                 else
@@ -566,10 +566,23 @@ namespace ubco.ovilab.ViconUnityStream
         /// here, before subject processing, covers every consumer of the
         /// stream (segments, markers, HWD, recorded playback plumbing) and
         /// leaves the raw/recorded JSON untouched.
+        /// A subject whose <c>CustomSubjectScript.ignoreViconWorldTransform</c>
+        /// is set bypasses this adjustment entirely (both knobs). Note the
+        /// per-subject gap-fill cache stores values as received, so an opted
+        /// out subject consistently caches un-knobbed values; toggling the
+        /// bool mid-session mixes knobbed and un-knobbed frames in the cache
+        /// until it drains.
         /// </summary>
-        private void ApplyViconWorldTransform(ViconStreamData streamData)
+        private void ApplyViconWorldTransform(string subjectName, ViconStreamData streamData)
         {
             if (streamData?.data == null)
+            {
+                return;
+            }
+
+            bool subjectFound = CustomSubjectScript.TryGetIgnoresViconWorldTransform(subjectName, out bool ignoreViconWorldTransform);
+            Debug.Assert(subjectFound, $"SubjectDataManager: no enabled CustomSubjectScript found for subject `{subjectName}` while resolving the world-transform opt-out; applying the global transform.");
+            if (subjectFound && ignoreViconWorldTransform)
             {
                 return;
             }
